@@ -40,16 +40,16 @@ DGX Spark, NVFP4 + vLLM, `--max-num-seqs 8`, 32k context, vLLM streaming endpoin
 
 Linear ops always use `FlashInferCutlassNvFp4LinearKernel` regardless. Only the **MoE backend** differs between the two configurations. CUTLASS MoE wins on TTFT (especially at C=4 thinking=True: 90 ms vs 124 ms). MARLIN MoE wins on aggregate throughput at C=8.
 
-### Refusal-rate verification (100-prompt random sample, NVFP4 + vLLM)
+### Refusal-rate verification — measured before/after (100-prompt scan, seed=42)
 
-| Mode | Refusal Rate | Empty (length artifact) | Real Refusal | vs base model* |
-|---|---|---|---|---|
-| `enable_thinking=True` (max_new=600) | 18/100 (18%) | **18/100** (length-truncated inside `<think>`) | **0%** real | base ~95-100% refusal |
-| `enable_thinking=False` (max_new=200) | 15/100 (15%) | 0 | **15%** | base ~95-100% refusal |
+| Mode | Base model | This (NVFP4 + vLLM) | Reduction |
+|---|---|---|---|
+| `enable_thinking=True` (max_new=600 base / 1200 abliterated) | **53/100 = 53%** | **0/100 real** (9 length-truncations inside `<think>`, not refusals) | **−53 pp** |
+| `enable_thinking=False` (max_new=200) | **99/100 = 99%** | **18/100 = 18%** | **−81 pp** |
 
-*The 18 length-truncations on `thinking=True` are length artifacts (max_tokens=600 ran out before `</think>` closed), not real refusals — bump `max_tokens` ≥ 1200 for reasoning workloads.
+The **99% → 18%** drop on `thinking=False` is the headline finding: a single closed-form linear projection on 2,998 weight tensors removes 81 percentage points of refusal behaviour, and the effect survives the modelopt NVFP4 quant + vLLM serve path.
 
-\* Hard baseline measurements against the unmodified `nvidia/Nemotron-3-Nano-Omni-30B-A3B-Reasoning-BF16` are pending — see [bench results](https://huggingface.co/AEON-7/Nemotron-3-Nano-Omni-AEON-Ultimate-Uncensored-BF16) on the model card for the most up-to-date figures.
+Full generations and heuristic source: [`bench/baseline_100_v2.json`](bench/baseline_100_v2.json), [`bench/nvfp4_100_v2.json`](bench/nvfp4_100_v2.json), [`bench/refusal_bench_nvfp4_v2.py`](bench/refusal_bench_nvfp4_v2.py).
 
 ---
 
