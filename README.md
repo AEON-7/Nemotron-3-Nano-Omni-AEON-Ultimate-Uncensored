@@ -120,7 +120,9 @@ Plus 4 idempotent patches:
 Defaults baked into v1:
 - `TORCH_CUDA_ARCH_LIST="12.0+PTX"` — sm_120 build, JITs to sm_121a on Spark, sm_120 on RTX/B100/B200
 - `ENABLE_NVFP4_SM100=0` — required by vLLM PR #40191 for sm_121a-only builds (avoids SM100-only symbol references at build time)
-- `VLLM_TEST_FORCE_FP8_MARLIN=1` — **set in v1**; the image's MoE default is MARLIN. Override with `-e VLLM_TEST_FORCE_FP8_MARLIN=0` at `docker run` time to flip to CUTLASS MoE (lower TTFT). A v1.1 image with CUTLASS-default-out-of-the-box is forthcoming.
+- `VLLM_TEST_FORCE_FP8_MARLIN=1` — image's NVFP4-MoE default is **MARLIN** (~5–10% higher aggregate throughput at C=8 for Nemotron-Omni's 128-expert × top-6 MoE shape). Override at `docker run` time with `-e VLLM_TEST_FORCE_FP8_MARLIN=0` to flip to **CUTLASS** MoE (lower TTFT — typically ~30 ms better at C=4). Linear ops always use `FlashInferCutlassNvFp4LinearKernel` regardless.
+
+> Both backends are valid choices. We benched both on Nemotron-Omni and the gap is small enough that there's no universal "best" — pick CUTLASS for chat/interactive (TTFT-bound), MARLIN for batch (throughput-bound). See the bench tables above.
 
 The [`Dockerfile.v1`](Dockerfile.v1) is reproducible. Build time on a warm ccache: 25–50 min on Spark.
 
@@ -131,8 +133,7 @@ The [`Dockerfile.v1`](Dockerfile.v1) is reproducible. Build time on a warm ccach
 ```
 .
 ├── README.md                  ← this file
-├── Dockerfile.v1              ← v1 (MARLIN default, override env var to flip)
-├── Dockerfile.v1.1            ← v1.1 (CUTLASS default — pending validation)
+├── Dockerfile.v1              ← canonical published image (MARLIN MoE default, runtime override to CUTLASS)
 ├── patches/
 │   ├── patch_kv_cache_utils.py
 │   ├── patch_cuda_optional_import.py

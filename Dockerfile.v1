@@ -1,4 +1,4 @@
-# vllm-nemotron-omni-aeon-ultimate:v1 — 2026-04-30
+# vllm-nemotron-omni-aeon-ultimate:v1 — 2026-04-30 (canonical / published)
 # Source-built vLLM v0.20.0 release commit (88d34c6409, 2026-04-27) targeting
 # DGX Spark (GB10 / sm_121a / unified memory) for the Nemotron-3-Nano-Omni-30B-A3B-Reasoning
 # model family — including the AEON-7 abliterated/quantized variants:
