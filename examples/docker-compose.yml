@@ -1,0 +1,60 @@
+# DGX Spark deployment for Nemotron-3-Nano-Omni-AEON-Ultimate-Uncensored (NVFP4 or BF16).
+#
+# Usage:
+#   1. Set HF_TOKEN in your shell:   export HF_TOKEN=hf_xxx
+#   2. Choose model:
+#      - default below uses NVFP4 (~22 GB on disk, ~22 GiB GPU resident)
+#      - swap to BF16 for the (~66 GB on disk, ~64 GiB GPU resident) variant
+#   3. docker compose up -d
+#   4. Tail logs:        docker compose logs -f
+#   5. Smoke test:       curl http://localhost:8000/v1/chat/completions ... (see README)
+#
+# CUTLASS NVFP4-MoE backend (lower TTFT, default) is selected by VLLM_TEST_FORCE_FP8_MARLIN=0.
+# To switch to MARLIN MoE for ~5-10% higher aggregate throughput at C=8, set =1.
+
+services:
+  vllm:
+    image: ghcr.io/aeon-7/vllm-nemotron-omni-aeon-ultimate:v1
+    container_name: nemotron-omni-aeon
+    restart: unless-stopped
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: "8gb"
+    ipc: host
+    ports:
+      - "8000:8000"
+    environment:
+      HF_TOKEN: ${HF_TOKEN}
+      # Backend selection: 0 = CUTLASS (default, lower TTFT) ; 1 = MARLIN (higher aggregate)
+      VLLM_TEST_FORCE_FP8_MARLIN: "0"
+      # Quiet some noisy upstream warnings on Spark
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    command:
+      - vllm
+      - serve
+      - AEON-7/Nemotron-3-Nano-Omni-AEON-Ultimate-Uncensored-NVFP4
+      - --trust-remote-code
+      - --max-model-len
+      - "200000"
+      - --gpu-memory-utilization
+      - "0.85"
+      - --max-num-seqs
+      - "16"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 600s
+      retries: 3

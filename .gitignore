@@ -1,0 +1,8 @@
+build_*.log
+push_*.log
+*.pyc
+__pycache__/
+.venv/
+.idea/
+.vscode/
+*.tmp
