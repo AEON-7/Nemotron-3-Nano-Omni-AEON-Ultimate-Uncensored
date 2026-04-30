@@ -40,16 +40,18 @@ DGX Spark, NVFP4 + vLLM, `--max-num-seqs 8`, 32k context, vLLM streaming endpoin
 
 Linear ops always use `FlashInferCutlassNvFp4LinearKernel` regardless. Only the **MoE backend** differs between the two configurations. CUTLASS MoE wins on TTFT (especially at C=4 thinking=True: 90 ms vs 124 ms). MARLIN MoE wins on aggregate throughput at C=8.
 
-### Refusal-rate verification — measured before/after (100-prompt scan, seed=42)
+### Refusal-rate verification — measured before/after (100-prompt scan, seed=42, max_new=1200)
 
 | Mode | Base model | This (NVFP4 + vLLM) | Reduction |
 |---|---|---|---|
-| `enable_thinking=True` (max_new=600 base / 1200 abliterated) | **53/100 = 53%** | **0/100 real** (9 length-truncations inside `<think>`, not refusals) | **−53 pp** |
-| `enable_thinking=False` (max_new=200) | **99/100 = 99%** | **18/100 = 18%** | **−81 pp** |
+| `enable_thinking=True` | **53/100 = 53%** | **0/100 real** (10 reasoning-loop non-completions — see note) | **−53 pp** |
+| `enable_thinking=False` | **99/100 = 99%** | **16/100 = 16%** | **−83 pp** |
 
-The **99% → 18%** drop on `thinking=False` is the headline finding: a single closed-form linear projection on 2,998 weight tensors removes 81 percentage points of refusal behaviour, and the effect survives the modelopt NVFP4 quant + vLLM serve path.
+The **99% → 16%** drop on `thinking=False` is the headline finding: a single closed-form linear projection on 2,998 weight tensors removes 83 percentage points of refusal behaviour, and the effect survives the modelopt NVFP4 quant + vLLM serve path.
 
-Full generations and heuristic source: [`bench/baseline_100_v2.json`](bench/baseline_100_v2.json), [`bench/nvfp4_100_v2.json`](bench/nvfp4_100_v2.json), [`bench/refusal_bench_nvfp4_v2.py`](bench/refusal_bench_nvfp4_v2.py).
+Note: 10 of 100 `thinking=True` prompts trigger reasoning-loop non-completions (model stuck repeating inside `<think>`, never closes — bumping `max_new` doesn't resolve it). These are generation failures, not refusals. The other 90 complete cleanly and comply.
+
+Full generations and heuristic source: [`bench/baseline_100_v2.json`](bench/baseline_100_v2.json), [`bench/nvfp4_100_v3.json`](bench/nvfp4_100_v3.json), [`bench/refusal_bench_nvfp4_v3.py`](bench/refusal_bench_nvfp4_v3.py).
 
 ---
 
