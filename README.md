@@ -6,6 +6,16 @@
 [![License](https://img.shields.io/badge/License-NVIDIA_Open_Model_Agreement-green)](https://www.nvidia.com/en-us/agreements/enterprise-software/nvidia-open-model-agreement/)
 [![☕ Tips](https://img.shields.io/badge/%E2%98%95_Tips-Support_the_work-ff5e5b?style=flat)](https://github.com/AEON-7/AEON-7#-support-the-work)
 
+
+> # ⚠️ ALPHA RELEASE — EXPERIMENTAL ABLITERATION (model side)
+>
+> The container image and deployment recipe in **this repo are stable**. The **model weights** it serves are not. This is the first known public abliteration of NVIDIA's NemotronH hybrid Mamba2 + Attention + MoE architecture, and the technique was developed iteratively against this model family. Real-world chat performance can degrade noticeably from the base model — particularly:
+>
+> - **Reasoning-loop non-completions** — ~10/100 prompts in our internal bench triggered repeated phrases inside `<think>` blocks that never close, producing empty or repeating answers. Multi-turn chat can amplify this.
+> - **NVFP4 quant noise compounds the abliteration artifact** — the BF16 sibling is the more stable fallback if you hit issues.
+>
+> We are tracking these regressions and plan a v9 abliteration pass before the model leaves alpha. **Please [open a discussion on the model card](https://huggingface.co/AEON-7/Nemotron-3-Nano-Omni-AEON-Ultimate-Uncensored-BF16/discussions) with concrete failure cases** — they directly drive what v9 fixes. The container image itself does not need rebuilding for v9; only the model weights swap.
+
 A purpose-built **vLLM** container image and deployment guide for [`AEON-7/Nemotron-3-Nano-Omni-AEON-Ultimate-Uncensored`](https://huggingface.co/AEON-7/Nemotron-3-Nano-Omni-AEON-Ultimate-Uncensored-NVFP4) on **NVIDIA DGX Spark** (GB10 / sm_121a / 128 GB unified memory).
 
 > ⚠️ **READ THE REQUIREMENTS SECTION FIRST.** This image is purpose-built for the DGX Spark (GB10 / sm_120-121 Blackwell) with PyTorch nightly cu130. It will *boot* on other Blackwell variants (B100/B200/RTX Pro 6000) since the build uses `12.0+PTX`, but the sm_121a-specific patches are no-ops there. Hopper (H100/H200) and Ampere (A100) are unsupported.
